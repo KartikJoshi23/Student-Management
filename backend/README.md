@@ -449,21 +449,23 @@ CMD ["npm", "start"]
 
 ## 🐛 Known Issues & Solutions
 
-### Issue 1: Student CRUD Operations Incomplete
-**Problem**: Some CRUD operations for students are missing or incomplete.
+### Issue 1: Student CRUD Operations Incomplete — ✅ Resolved
+**Problem**: CRUD operation handlers in the students controller were empty stubs.
 **Location**: `/src/modules/students/students-controller.js`
-**Solution**: 
-- Implement missing endpoints (CREATE, UPDATE, DELETE)
-- Add proper validation and error handling
-- Test all operations thoroughly
+**Resolution**: 
+- Implemented all 6 handlers: GET (list with pagination), POST (create), GET/:id (detail), PUT/:id (update), DELETE/:id (delete), POST/:id/status (toggle)
+- Added Zod validation schemas in `students-schema.js` for POST and PUT
+- Added DELETE endpoint with FK-safe dependent record cleanup
+- Added pagination support (page/limit query params)
 
-### Issue 2: Notice Description Not Saving
-**Problem**: Notice description field not being saved properly.
-**Location**: `/src/modules/notices/notices-service.js`
-**Solution**: 
-- Check database query parameters
-- Verify request body parsing
-- Add proper validation for description field
+### Issue 2: Notice Description Not Saving — ✅ Resolved
+**Problem**: Notice description field not being saved when creating a new notice.
+**Location**: `frontend/src/domains/notice/components/notice-form.tsx`
+**Root Cause**: The description `<TextField>` was registered as `'content'` instead of `'description'` via React Hook Form's `register()`, causing a key mismatch with the Zod schema and API payload.
+**Resolution**: 
+- Fixed `register('content')` → `register('description')` in `notice-form.tsx`
+- Fixed `initialState` key from `content` to `description` in `add-notice-page.tsx`
+- Added `.max()` constraints to Zod schema matching DB VARCHAR limits
 
 ## 📊 Performance Considerations
 

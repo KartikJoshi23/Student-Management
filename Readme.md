@@ -52,23 +52,30 @@ psql -d school_mgmt -f seed_db/tables.sql
 psql -d school_mgmt -f seed_db/seed-db.sql
 ```
 
-## 🎯 Skill Test Problems
+## 🎯 Skill Test Problems — Completed
 
-### **Frontend Developer Challenge**
+### **Frontend Developer Challenge** ✅
 **Fix "Add New Notice" Page**
 
 - **Location**: `/app/notices/add`
-- **Issue**: When clicking the 'Save' button, the 'description' field doesn't get saved
-- **Skills Tested**: React, Form handling, State management, API integration
-- **Expected Fix**: Ensure description field is properly bound and submitted
+- **Root Cause**: The description `<TextField>` was registered with React Hook Form as `'content'` instead of `'description'`, causing a mismatch with the Zod schema, TypeScript type, and API payload. The `initialState` in `add-notice-page.tsx` also used `content` instead of `description`.
+- **Fix Applied**:
+  - `notice-form.tsx`: Changed `register('content')` → `register('description')`
+  - `add-notice-page.tsx`: Changed `content: ''` → `description: ''` in `initialState`
+  - `notice-schema.ts`: Added `.max(100)` / `.max(400)` constraints matching DB VARCHAR limits
 
-### **Backend Developer Challenge**
+### **Backend Developer Challenge** ✅
 **Complete CRUD Operations in Student Management**
 
 - **Location**: `/src/modules/students/students-controller.js`
-- **Issue**: Implement missing CRUD operations for student management
-- **Skills Tested**: Node.js, Express, PostgreSQL, API design
-- **Expected Implementation**: Full Create, Read, Update, Delete operations
+- **Implementation**:
+  - `GET /students` — List students with pagination (`page`, `limit`) and filters (`name`, `className`, `section`, `roll`)
+  - `POST /students` — Create student with Zod input validation
+  - `GET /students/:id` — Get student detail with 404 handling
+  - `PUT /students/:id` — Update student with Zod input validation and not-found handling
+  - `DELETE /students/:id` — Delete student with FK-safe cleanup and not-found handling
+  - `POST /students/:id/status` — Toggle student active status
+- **Additional work**: Created `students-schema.js` with Zod validation schemas matching DB column constraints
 
 ## 🛠️ Technology Stack
 

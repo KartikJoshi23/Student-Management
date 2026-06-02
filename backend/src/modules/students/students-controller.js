@@ -1,10 +1,30 @@
 const asyncHandler = require("express-async-handler");
-const { getAllStudents, addNewStudent, getStudentDetail, setStudentStatus, updateStudent } = require("./students-service");
+const { getAllStudents, addNewStudent, getStudentDetail, setStudentStatus, updateStudent, deleteStudent } = require("./students-service");
+
+const DEFAULT_PAGE = 1;
+const DEFAULT_LIMIT = 10;
 
 const handleGetAllStudents = asyncHandler(async (req, res) => {
-    const { name, className, section, roll } = req.query;
-    const students = await getAllStudents({ name, className, section, roll });
-    res.json({ students });
+    const { name, className, section, roll, page, limit } = req.query;
+    const parsedPage = parseInt(page, 10) || DEFAULT_PAGE;
+    const parsedLimit = parseInt(limit, 10) || DEFAULT_LIMIT;
+    const offset = (parsedPage - 1) * parsedLimit;
+
+    const result = await getAllStudents({
+        name,
+        className,
+        section,
+        roll,
+        limit: parsedLimit,
+        offset,
+    });
+
+    res.json({
+        students: result.students,
+        total: result.total,
+        page: parsedPage,
+        limit: parsedLimit,
+    });
 });
 
 const handleAddStudent = asyncHandler(async (req, res) => {
@@ -34,10 +54,17 @@ const handleStudentStatus = asyncHandler(async (req, res) => {
     res.json(message);
 });
 
+const handleDeleteStudent = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const message = await deleteStudent(id);
+    res.json(message);
+});
+
 module.exports = {
     handleGetAllStudents,
     handleGetStudentDetail,
     handleAddStudent,
     handleStudentStatus,
     handleUpdateStudent,
+    handleDeleteStudent,
 };

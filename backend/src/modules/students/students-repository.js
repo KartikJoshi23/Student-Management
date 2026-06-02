@@ -8,8 +8,42 @@ const getRoleId = async (roleName) => {
 }
 
 const findAllStudents = async (payload) => {
-    const { name, className, section, roll } = payload;
-    let query = `
+    const { name, className, section, roll, limit = 10, offset = 0 } = payload;
+
+    let whereClause = 'WHERE t1.role_id = 3';
+    const filterParams = [];
+
+    if (name) {
+        filterParams.push(name);
+        whereClause += ` AND t1.name = $${filterParams.length}`;
+    }
+    if (className) {
+        filterParams.push(className);
+        whereClause += ` AND t3.class_name = $${filterParams.length}`;
+    }
+    if (section) {
+        filterParams.push(section);
+        whereClause += ` AND t3.section_name = $${filterParams.length}`;
+    }
+    if (roll) {
+        filterParams.push(roll);
+        whereClause += ` AND t3.roll = $${filterParams.length}`;
+    }
+
+    // Total count for pagination metadata
+    const countQuery = `
+        SELECT COUNT(*)
+        FROM users t1
+        LEFT JOIN user_profiles t3 ON t1.id = t3.user_id
+        ${whereClause}`;
+    const { rows: countRows } = await processDBRequest({
+        query: countQuery,
+        queryParams: [...filterParams],
+    });
+    const total = parseInt(countRows[0].count, 10);
+
+    // Paginated data query
+    const dataQuery = `
         SELECT
             t1.id,
             t1.name,
@@ -18,29 +52,13 @@ const findAllStudents = async (payload) => {
             t1.is_active AS "systemAccess"
         FROM users t1
         LEFT JOIN user_profiles t3 ON t1.id = t3.user_id
-        WHERE t1.role_id = 3`;
-    let queryParams = [];
-    if (name) {
-        query += ` AND t1.name = $${queryParams.length + 1}`;
-        queryParams.push(name);
-    }
-    if (className) {
-        query += ` AND t3.class_name = $${queryParams.length + 1}`;
-        queryParams.push(className);
-    }
-    if (section) {
-        query += ` AND t3.section_name = $${queryParams.length + 1}`;
-        queryParams.push(section);
-    }
-    if (roll) {
-        query += ` AND t3.roll = $${queryParams.length + 1}`;
-        queryParams.push(roll);
-    }
+        ${whereClause}
+        ORDER BY t1.id
+        LIMIT $${filterParams.length + 1} OFFSET $${filterParams.length + 2}`;
+    const queryParams = [...filterParams, limit, offset];
 
-    query += ' ORDER BY t1.id';
-
-    const { rows } = await processDBRequest({ query, queryParams });
-    return rows;
+    const { rows } = await processDBRequest({ query: dataQuery, queryParams });
+    return { students: rows, total };
 }
 
 const addOrUpdateStudent = async (payload) => {
@@ -111,11 +129,31 @@ const findStudentToUpdate = async (paylaod) => {
     return rows;
 }
 
+const deleteStudentById = async (id) => {
+    // Remove dependent records in FK-safe order before deleting the user.
+    // user_refresh_tokens has ON DELETE CASCADE so it is handled automatically.
+    const dependentTables = [
+        'DELETE FROM user_leave_policy WHERE user_id = $1',
+        'DELETE FROM user_leaves WHERE user_id = $1',
+        'DELETE FROM user_profiles WHERE user_id = $1',
+    ];
+
+    for (const query of dependentTables) {
+        await processDBRequest({ query, queryParams: [id] });
+    }
+
+    // Guard with role_id = 3 to ensure only students can be deleted
+    const query = 'DELETE FROM users WHERE id = $1 AND role_id = 3';
+    const { rowCount } = await processDBRequest({ query, queryParams: [id] });
+    return rowCount;
+}
+
 module.exports = {
     getRoleId,
     findAllStudents,
     addOrUpdateStudent,
     findStudentDetail,
     findStudentToSetStatus,
-    findStudentToUpdate
+    findStudentToUpdate,
+    deleteStudentById,
 };
