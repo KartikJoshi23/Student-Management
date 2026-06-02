@@ -85,8 +85,20 @@ export const NoticeForm: React.FC<Props> = ({
         size='small'
         sx={{ marginTop: '20px' }}
       />
+      {/*
+        * FIX: The description field was previously registered as 'content',
+        * but the Zod schema (NoticeFormSchema), TypeScript type (NoticeFormProps),
+        * RTK Query mutation payload, and the backend API all expect the key
+        * 'description'. This mismatch caused:
+        *   1. User input stored under form.content (wrong key)
+        *   2. Zod validation checked form.description (always empty) → rejected
+        *   3. Even if bypassed, the API payload would send content instead of
+        *      description, and the backend would receive description: undefined
+        *
+        * Corrected: register('content') → register('description')
+        */}
       <TextField
-        {...register('content')}
+        {...register('description')}
         error={Boolean(errors.description)}
         helperText={errors.description?.message}
         type='text'
